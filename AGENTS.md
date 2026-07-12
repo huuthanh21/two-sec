@@ -27,3 +27,12 @@ Single-context: one `CONTEXT.md` at the repo root, plus `docs/adr/`. See `docs/a
 - **Lint**: `./gradlew :app:lintDebug`
 
 Before running instrumented tests, ensure a device is connected via wireless ADB (`adb pair` + `adb connect`) or USB. Keep the phone screen unlocked during install. See `docs/agents/testing.md` for the full workflow and for notes on the DataStore close/reopen pattern in tests.
+
+## Git identity
+
+Project-scoped (set in `.git/config`, not global):
+
+- name: `huuthanh21`
+- email: `ththanh.work@gmail.com`
+
+If commits show different credentials, fix with `git config --local user.name "huuthanh21"` and `git config --local user.email "ththanh.work@gmail.com"`.
