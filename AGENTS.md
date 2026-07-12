@@ -19,3 +19,11 @@ Default five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `
 ### Domain docs
 
 Single-context: one `CONTEXT.md` at the repo root, plus `docs/adr/`. See `docs/agents/domain.md`.
+
+### Running tests
+
+- **Unit tests** (JVM, no device): `./gradlew :app:testDebugUnitTest`
+- **Instrumented tests** (device or emulator): `./gradlew :app:connectedDebugAndroidTest`
+- **Lint**: `./gradlew :app:lintDebug`
+
+Before running instrumented tests, ensure a device is connected via wireless ADB (`adb pair` + `adb connect`) or USB. Keep the phone screen unlocked during install. See `docs/agents/testing.md` for the full workflow and for notes on the DataStore close/reopen pattern in tests.
