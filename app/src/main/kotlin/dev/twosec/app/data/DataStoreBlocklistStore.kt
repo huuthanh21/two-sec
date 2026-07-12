@@ -10,20 +10,30 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 
 class DataStoreBlocklistStore(
     context: Context,
     private val storeName: String = DEFAULT_STORE_NAME,
-    scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ) : BlocklistStore {
 
     private val store: DataStore<Preferences> = PreferenceDataStoreFactory.create(
         scope = scope,
         produceFile = { context.preferencesDataStoreFile(storeName) },
     )
+
+    fun close() {
+        scope.coroutineContext[Job]?.apply {
+            cancel()
+            runBlocking { children.forEach { it.join() } }
+        }
+    }
 
     override fun masterEnabled(): Flow<Boolean> = store.data.map { it[KEY_MASTER] ?: false }
 
