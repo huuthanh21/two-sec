@@ -8,10 +8,10 @@ import dev.twosec.app.data.BlocklistStore
 import dev.twosec.app.platform.InstalledApp
 import dev.twosec.app.platform.InstalledAppsProvider
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -22,6 +22,7 @@ data class ConfigUiState(
     val installedApps: List<InstalledApp> = emptyList(),
     val blocklist: Set<String> = emptySet(),
     val isLoading: Boolean = true,
+    val query: String = "",
 )
 
 class ConfigViewModel(
@@ -31,18 +32,28 @@ class ConfigViewModel(
 
     private val installedAppsState = MutableStateFlow<List<InstalledApp>>(emptyList())
     private val isLoadingState = MutableStateFlow(true)
+    private val queryState = MutableStateFlow("")
+
+    private val filteredApps: Flow<List<InstalledApp>> = combine(
+        installedAppsState,
+        queryState,
+    ) { apps, query ->
+        filterApps(apps, query)
+    }
 
     val state: StateFlow<ConfigUiState> = combine(
         store.masterEnabled(),
         store.blocklist(),
-        installedAppsState,
+        filteredApps,
         isLoadingState,
-    ) { masterOn, blocklist, apps, isLoading ->
+        queryState,
+    ) { masterOn, blocklist, apps, isLoading, query ->
         ConfigUiState(
             masterOn = masterOn,
             installedApps = apps,
             blocklist = blocklist,
             isLoading = isLoading,
+            query = query,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -72,6 +83,10 @@ class ConfigViewModel(
                 store.removeFromBlocklist(packageName)
             }
         }
+    }
+
+    fun onQueryChange(newValue: String) {
+        queryState.value = newValue
     }
 
     companion object {
