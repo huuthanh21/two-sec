@@ -13,4 +13,6 @@ interface BlocklistStore {
     fun whitelistExpiries(): Flow<Map<String, Long>>
     suspend fun setWhitelistExpiry(packageName: String, untilMs: Long)
     suspend fun clearExpiredWhitelist(nowMs: Long)
+
+    fun snapshot(): BlocklistSnapshot
 }

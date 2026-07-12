@@ -35,4 +35,10 @@ class InMemoryBlocklistStore : BlocklistStore {
     override suspend fun clearExpiredWhitelist(nowMs: Long) {
         whitelist.update { current -> current.filterValues { expiry -> expiry > nowMs } }
     }
+
+    override fun snapshot(): BlocklistSnapshot = BlocklistSnapshot(
+        masterEnabled = master.value,
+        blocklist = blocklist.value,
+        whitelistExpiries = whitelist.value,
+    )
 }

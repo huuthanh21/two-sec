@@ -8,7 +8,7 @@ This file is the single source of truth for domain vocabulary. Use the terms her
 
 - **App**: a user-installed Android application (e.g. Instagram, TikTok, Reddit). Identified by its package name.
 - **Blocklist**: the set of package names the user has chosen to block. The engine never blocks anything not in the blocklist.
-- **BlockerEngine**: the pure decision function. Given `(packageName, now)`, returns either `Intervene` or `Skip(reason)`. Constructed with a `BlocklistStore`, a `Clock`, an ignored-package set, and the app's own package name. Highest testable seam.
+- **BlockerEngine**: the pure decision function. Given `(packageName, now)`, returns either `Intervene` or `Skip(reason)`. Constructed with a `BlocklistStore`, an ignored-package set, and the app's own package name. Highest testable seam.
 - **BlockerAccessibilityService**: the `AccessibilityService` subclass that subscribes to `TYPE_WINDOW_STATE_CHANGED` and forwards foregrounded package names to the `BlockerEngine`. Owns no decision logic.
 - **BlocklistStore**: the persistence seam for the master toggle, the blocklist, and the per-package whitelist expiry timestamps. Exposes `Flow`s for reads and `suspend` writes. Production implementation: `DataStoreBlocklistStore`. Test fake: `InMemoryBlocklistStore`.
 - **BootReceiver**: the `BroadcastReceiver` registered for `BOOT_COMPLETED` and `LOCKED_BOOT_COMPLETED`. Its only job is to renew the `BlockerAccessibilityService` subscription after a reboot.
@@ -29,4 +29,4 @@ This file is the single source of truth for domain vocabulary. Use the terms her
 - **Skip(reason)**: the `Decision` variant that means the engine chose not to intervene. The `reason` is one of `MasterOff`, `NotInBlocklist`, `Whitelisted`, `IgnoredPackage`, `OwnPackage`.
 - **ViewState**: short for `InterventionViewState` in the intervention context.
 - **Whitelist expiry**: a future timestamp until which a package is exempt from blocking. Set by the intervention when the user taps Continue (now + 30s). Read by the engine on every event.
-- **WhitelistGate**: the small helper that records and queries whitelist expiries. Delegates to `BlocklistStore` for persistence and uses the injected `Clock` for time.
+- **WhitelistGate**: the small helper that records and queries whitelist expiries. Delegates to `BlocklistStore` for persistence.
