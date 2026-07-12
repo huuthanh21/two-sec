@@ -19,6 +19,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TwoSec">
+        <profileable android:shell="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

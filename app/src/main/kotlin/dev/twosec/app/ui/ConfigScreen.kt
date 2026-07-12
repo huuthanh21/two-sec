@@ -97,7 +97,11 @@ private fun ConfigScreenContent(
                 contentPadding = PaddingValues(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                items(items = state.installedApps, key = { it.packageName }) { app ->
+                items(
+                    items = state.installedApps,
+                    key = { it.packageName },
+                    contentType = { "app_row" },
+                ) { app ->
                     AppRow(
                         app = app,
                         checked = app.packageName in state.blocklist,

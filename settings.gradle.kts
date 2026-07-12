@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "two-sec"
 include(":app")
+include(":benchmark")
