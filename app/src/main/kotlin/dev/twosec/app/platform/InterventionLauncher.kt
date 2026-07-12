@@ -19,7 +19,6 @@ class InterventionLauncher(
         if (decision !is Decision.Intervene) return decision
         val intent = Intent(context, InterventionActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, packageName)
         }
         activityStarter(intent)

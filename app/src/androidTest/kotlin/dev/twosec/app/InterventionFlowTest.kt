@@ -47,28 +47,12 @@ class InterventionFlowTest {
 
     @Test
     fun launchingBlockedTargetApp_triggersInterventionActivity() {
-        val store = InMemoryBlocklistStore()
-        runBlocking {
-            store.setMasterEnabled(true)
-            store.addToBlocklist(BLOCKED_PACKAGE)
-        }
-
-        val clock: Clock = SystemClock()
-        val engine = BlockerEngine(
-            store = store,
-            ignoredPackages = SystemPackages.ignored,
-            ownPackage = mainContext.packageName,
-        )
-        val launcher = InterventionLauncher(
-            context = mainContext,
-            engine = engine,
-            clock = clock,
-            activityStarter = { intent -> mainContext.startActivity(intent) },
+        val launcher = launcherFor(
+            blocked = setOf(BLOCKED_PACKAGE),
+            starter = { intent -> mainContext.startActivity(intent) },
         )
 
-        val targetIntent = Intent().setClassName(testContext, TestTargetActivity::class.java.name)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        testContext.startActivity(targetIntent)
+        launchTarget()
 
         val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
         assertTrue(
@@ -81,25 +65,10 @@ class InterventionFlowTest {
 
     @Test
     fun launcher_returnsIntervene_andCallsActivityStarter_forBlockedPackage() {
-        val store = InMemoryBlocklistStore()
-        runBlocking {
-            store.setMasterEnabled(true)
-            store.addToBlocklist(BLOCKED_PACKAGE)
-        }
-
-        val clock: Clock = SystemClock()
-        val engine = BlockerEngine(
-            store = store,
-            ignoredPackages = SystemPackages.ignored,
-            ownPackage = mainContext.packageName,
-        )
-
         var startedIntent: Intent? = null
-        val launcher = InterventionLauncher(
-            context = mainContext,
-            engine = engine,
-            clock = clock,
-            activityStarter = { intent -> startedIntent = intent },
+        val launcher = launcherFor(
+            blocked = setOf(BLOCKED_PACKAGE),
+            starter = { intent -> startedIntent = intent },
         )
 
         val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
@@ -120,18 +89,9 @@ class InterventionFlowTest {
 
     @Test
     fun launcher_returnsSkip_andDoesNotStartActivity_forUnblockedPackage() {
-        val store = InMemoryBlocklistStore()
-        runBlocking { store.setMasterEnabled(true) }
-
-        val launcher = InterventionLauncher(
-            context = mainContext,
-            engine = BlockerEngine(
-                store = store,
-                ignoredPackages = SystemPackages.ignored,
-                ownPackage = mainContext.packageName,
-            ),
-            clock = SystemClock(),
-            activityStarter = { error("Should not be called for unblocked package") },
+        val launcher = launcherFor(
+            blocked = emptySet(),
+            starter = { error("Should not be called for unblocked package") },
         )
 
         val decision = launcher.onForegroundApp(UNBLOCKED_PACKAGE)
@@ -143,6 +103,35 @@ class InterventionFlowTest {
         val intent = Intent().setClassName(mainContext, "dev.twosec.app.ui.InterventionActivity")
         val activities = mainContext.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
         assertTrue("InterventionActivity should be registered in main manifest", activities.isNotEmpty())
+    }
+
+    private fun launcherFor(
+        blocked: Set<String>,
+        starter: (Intent) -> Unit,
+    ): InterventionLauncher {
+        val store = InMemoryBlocklistStore()
+        runBlocking {
+            store.setMasterEnabled(true)
+            for (pkg in blocked) store.addToBlocklist(pkg)
+        }
+        val clock: Clock = SystemClock()
+        val engine = BlockerEngine(
+            store = store,
+            ignoredPackages = SystemPackages.ignored,
+            ownPackage = mainContext.packageName,
+        )
+        return InterventionLauncher(
+            context = mainContext,
+            engine = engine,
+            clock = clock,
+            activityStarter = starter,
+        )
+    }
+
+    private fun launchTarget() {
+        val targetIntent = Intent().setClassName(testContext, TestTargetActivity::class.java.name)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        testContext.startActivity(targetIntent)
     }
 
     private fun waitForTopPackage(expected: String, timeoutMs: Long) {

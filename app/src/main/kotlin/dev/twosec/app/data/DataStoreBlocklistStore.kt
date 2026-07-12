@@ -14,9 +14,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class DataStoreBlocklistStore(
@@ -29,20 +28,6 @@ class DataStoreBlocklistStore(
         scope = scope,
         produceFile = { context.preferencesDataStoreFile(storeName) },
     )
-
-    private val _snapshot = MutableStateFlow(BlocklistSnapshot(false, emptySet(), emptyMap()))
-
-    init {
-        scope.launch {
-            store.data.collect { prefs ->
-                _snapshot.value = BlocklistSnapshot(
-                    masterEnabled = prefs[KEY_MASTER] ?: false,
-                    blocklist = prefs[KEY_BLOCKLIST] ?: emptySet(),
-                    whitelistExpiries = decodeWhitelist(prefs[KEY_WHITELIST]),
-                )
-            }
-        }
-    }
 
     fun close() {
         scope.coroutineContext[Job]?.apply {
@@ -93,7 +78,14 @@ class DataStoreBlocklistStore(
         }
     }
 
-    override fun snapshot(): BlocklistSnapshot = _snapshot.value
+    override fun snapshot(): BlocklistSnapshot {
+        val prefs = runBlocking { store.data.first() }
+        return BlocklistSnapshot(
+            masterEnabled = prefs[KEY_MASTER] ?: false,
+            blocklist = prefs[KEY_BLOCKLIST] ?: emptySet(),
+            whitelistExpiries = decodeWhitelist(prefs[KEY_WHITELIST]),
+        )
+    }
 
     private fun encodeWhitelist(map: Map<String, Long>): Set<String> =
         map.map { (pkg, expiry) -> "$pkg$SEPARATOR$expiry" }.toSet()

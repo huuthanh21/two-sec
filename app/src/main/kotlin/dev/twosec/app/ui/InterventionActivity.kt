@@ -22,21 +22,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.twosec.app.R
 import dev.twosec.app.TwoSecApp
+import dev.twosec.app.data.Clock
 import dev.twosec.app.domain.InterventionEffect
 import dev.twosec.app.domain.InterventionEvent
 import dev.twosec.app.domain.InterventionStateMachine
 import dev.twosec.app.domain.InterventionViewState
-import kotlinx.coroutines.launch
+import dev.twosec.app.domain.WhitelistGate
+import kotlinx.coroutines.runBlocking
 
 class InterventionActivity : ComponentActivity() {
 
     private lateinit var packageName: String
     private lateinit var stateMachine: InterventionStateMachine
+    private lateinit var gate: WhitelistGate
+    private lateinit var clock: Clock
     private val handler = Handler(Looper.getMainLooper())
     private val tickRunnable = object : Runnable {
         override fun run() {
-            val app = application as TwoSecApp
-            stateMachine.process(InterventionEvent.Tick(app.clock.now()))
+            stateMachine.process(InterventionEvent.Tick(clock.now()))
                 .forEach { applyEffect(it) }
             handler.postDelayed(this, TICK_INTERVAL_MS)
         }
@@ -48,9 +51,11 @@ class InterventionActivity : ComponentActivity() {
             ?: error("InterventionActivity requires $EXTRA_PACKAGE_NAME")
 
         val app = application as TwoSecApp
+        gate = app.whitelistGate
+        clock = app.clock
         stateMachine = InterventionStateMachine(
             packageName = packageName,
-            clock = app.clock,
+            clock = clock,
         )
         stateMachine.initialEffects.forEach { applyEffect(it) }
 
@@ -72,13 +77,22 @@ class InterventionActivity : ComponentActivity() {
     }
 
     private fun onUserContinue() {
-        stateMachine.process(InterventionEvent.UserTappedContinue)
-            .forEach { applyEffect(it) }
+        processEventsReversed(listOf(InterventionEvent.UserTappedContinue))
     }
 
     private fun onUserClose() {
-        stateMachine.process(InterventionEvent.UserTappedClose)
-            .forEach { applyEffect(it) }
+        processEventsReversed(listOf(InterventionEvent.UserTappedClose))
+    }
+
+    private fun handleBackPressed() {
+        processEventsReversed(listOf(InterventionEvent.BackPressed))
+    }
+
+    private fun processEventsReversed(events: List<InterventionEvent>) {
+        for (event in events) {
+            val effects = stateMachine.process(event)
+            for (effect in effects.reversed()) applyEffect(effect)
+        }
     }
 
     private fun applyEffect(effect: InterventionEffect) {
@@ -96,8 +110,7 @@ class InterventionActivity : ComponentActivity() {
     }
 
     private fun whitelist(until: Long) {
-        val app = application as TwoSecApp
-        app.appScope.launch { app.whitelistGate.setWhitelist(packageName, until) }
+        runBlocking { gate.setWhitelist(packageName, until) }
     }
 
     @Composable
@@ -108,9 +121,7 @@ class InterventionActivity : ComponentActivity() {
     ) {
         val showButtons = state is InterventionViewState.AwaitingChoice
 
-        BackHandler(enabled = true) {
-            if (showButtons) onClose()
-        }
+        BackHandler(enabled = true) { handleBackPressed() }
 
         Box(
             modifier = Modifier.fillMaxSize().padding(32.dp),
