@@ -10,7 +10,7 @@ Framework: Kotlin + Jetpack Compose Android app.
 
 ### Issue tracker
 
-Local markdown under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+GitHub Issues — use the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
