@@ -7,4 +7,11 @@
     <string name="setup_header">Setup</string>
     <string name="setup_step_accessibility">1. Enable Accessibility permission: System Settings → Accessibility → two-sec → Use.</string>
     <string name="setup_step_battery">2. Disable battery optimization: System Settings → Apps → two-sec → Battery → Unrestricted.</string>
+
+    <string name="accessibility_service_label">two-sec</string>
+    <string name="accessibility_service_description">Pauses for a few seconds before opening apps you tend to use on autopilot.</string>
+
+    <string name="intervention_prompt">Take a breath.</string>
+    <string name="intervention_continue">Continue</string>
+    <string name="intervention_close">Close</string>
 </resources>
