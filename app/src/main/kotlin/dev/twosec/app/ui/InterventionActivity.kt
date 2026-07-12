@@ -16,8 +16,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.twosec.app.R
@@ -36,11 +40,13 @@ class InterventionActivity : ComponentActivity() {
     private lateinit var stateMachine: InterventionStateMachine
     private lateinit var gate: WhitelistGate
     private lateinit var clock: Clock
+    private var viewState by mutableStateOf<InterventionViewState>(InterventionViewState.Counting(0L))
     private val handler = Handler(Looper.getMainLooper())
     private val tickRunnable = object : Runnable {
         override fun run() {
             stateMachine.process(InterventionEvent.Tick(clock.now()))
                 .forEach { applyEffect(it) }
+            viewState = stateMachine.state
             handler.postDelayed(this, TICK_INTERVAL_MS)
         }
     }
@@ -58,10 +64,11 @@ class InterventionActivity : ComponentActivity() {
             clock = clock,
         )
         stateMachine.initialEffects.forEach { applyEffect(it) }
+        viewState = stateMachine.state
 
         setContent {
             InterventionScreen(
-                state = stateMachine.state,
+                state = viewState,
                 onContinue = { onUserContinue() },
                 onClose = { onUserClose() },
             )
@@ -134,12 +141,14 @@ class InterventionActivity : ComponentActivity() {
                 Text(
                     text = stringResource(R.string.intervention_prompt),
                     style = MaterialTheme.typography.headlineMedium,
+                    color = Color.White,
                 )
                 if (state is InterventionViewState.Counting) {
                     val secondsRemaining = (state.millisRemaining + 999L) / 1000L
                     Text(
                         text = secondsRemaining.toString(),
                         style = MaterialTheme.typography.displayLarge,
+                        color = Color.White,
                     )
                 }
                 if (showButtons) {
