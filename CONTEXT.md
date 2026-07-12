@@ -18,7 +18,8 @@ This file is the single source of truth for domain vocabulary. Use the terms her
 - **ConfigUiState**: the rendered state of the config screen — master toggle, installed apps, current blocklist, loading flag.
 - **InstalledApp**: a UI-layer value type with a `packageName` and a `label`, produced by `InstalledAppsProvider`.
 - **InstalledAppsProvider**: a thin wrapper over `PackageManager` that returns the launchable user apps on the device. The only place in the app that reads `PackageManager` to enumerate user apps.
-- **Decision**: the return type of `BlockerEngine.decide(packageName, now)`. Sealed type with `Intervene` and `Skip(reason)` variants, where `reason` covers `MasterOff`, `NotInBlocklist`, `Whitelisted`, `IgnoredPackage`, `OwnPackage`.
+- **InterventionLauncher**: the platform-layer glue between `BlockerAccessibilityService` and `BlockerEngine`. Tracks the last foreground package so repeated `TYPE_WINDOW_STATE_CHANGED` events for the same package (in-app navigation) are filtered out as `Skip(AlreadyInForeground)` before the engine runs. When the engine returns `Intervene`, invokes the wired `onIntervene` callback with the package name; the service supplies that callback and is responsible for building the `Intent` and starting `InterventionActivity`.
+- **Decision**: the return type of `BlockerEngine.decide(packageName, now)`. Sealed type with `Intervene` and `Skip(reason)` variants, where `reason` covers `MasterOff`, `NotInBlocklist`, `Whitelisted`, `IgnoredPackage`, `OwnPackage`, `AlreadyInForeground`. `AlreadyInForeground` is produced by `InterventionLauncher` (not the engine) when the foreground package has not changed since the last event — it filters in-app navigation before the engine runs.
 - **Effect**: a side-effect the intervention state machine requests the activity to perform. `ShowButtons`, `HideButtons`, `FinishActivity`, `GoHome`, `WhitelistPackage(packageName, until)`.
 - **Intervention**: the five-second pause the user sees when they open a blocked app. Renders a fixed prompt, suppresses the Back button, and shows Continue/Close buttons only after the countdown completes.
 - **InterventionActivity**: the full-screen, opaque activity that renders the intervention. The only place on the intervention path that touches the `Activity` lifecycle, `setContentView`, or `Handler`.
@@ -26,7 +27,7 @@ This file is the single source of truth for domain vocabulary. Use the terms her
 - **InterventionStateMachine**: the pure state machine that owns the intervention flow. Given a stream of `InterventionEvent`s, returns a stream of `InterventionViewState`s and `InterventionEffect`s. Second testable seam.
 - **InterventionViewState**: the rendered state of the intervention. `Counting(millisRemaining)` or `AwaitingChoice`.
 - **Master toggle**: the on/off switch for the entire blocker. When off, the engine always returns `Skip(MasterOff)`.
-- **Skip(reason)**: the `Decision` variant that means the engine chose not to intervene. The `reason` is one of `MasterOff`, `NotInBlocklist`, `Whitelisted`, `IgnoredPackage`, `OwnPackage`.
+- **Skip(reason)**: the `Decision` variant that means the engine chose not to intervene. The `reason` is one of `MasterOff`, `NotInBlocklist`, `Whitelisted`, `IgnoredPackage`, `OwnPackage`, `AlreadyInForeground`.
 - **ViewState**: short for `InterventionViewState` in the intervention context.
 - **Whitelist expiry**: a future timestamp until which a package is exempt from blocking. Set by the intervention when the user taps Continue (now + 30s). Read by the engine on every event.
 - **WhitelistGate**: the small helper that records and queries whitelist expiries. Delegates to `BlocklistStore` for persistence.

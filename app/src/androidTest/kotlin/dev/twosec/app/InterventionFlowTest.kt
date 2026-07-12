@@ -49,7 +49,7 @@ class InterventionFlowTest {
     fun launchingBlockedTargetApp_triggersInterventionActivity() {
         val launcher = launcherFor(
             blocked = setOf(BLOCKED_PACKAGE),
-            starter = { intent -> mainContext.startActivity(intent) },
+            onIntervene = { packageName -> startInterventionActivity(packageName) },
         )
 
         launchTarget()
@@ -64,34 +64,24 @@ class InterventionFlowTest {
     }
 
     @Test
-    fun launcher_returnsIntervene_andCallsActivityStarter_forBlockedPackage() {
-        var startedIntent: Intent? = null
+    fun launcher_returnsIntervene_andCallsOnIntervene_withBlockedPackageName() {
+        var startedPackage: String? = null
         val launcher = launcherFor(
             blocked = setOf(BLOCKED_PACKAGE),
-            starter = { intent -> startedIntent = intent },
+            onIntervene = { packageName -> startedPackage = packageName },
         )
 
         val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
 
         assertTrue("Engine should Intervene for blocked package; got $decision", decision is Decision.Intervene)
-        assertTrue("Activity starter should be called", startedIntent != null)
-        val intent = startedIntent!!
-        assertEquals(
-            "dev.twosec.app.ui.InterventionActivity",
-            intent.component?.className,
-        )
-        assertEquals(
-            BLOCKED_PACKAGE,
-            intent.getStringExtra(InterventionActivity.EXTRA_PACKAGE_NAME),
-        )
-        assertTrue("Intent should have FLAG_ACTIVITY_NEW_TASK", intent.flags and Intent.FLAG_ACTIVITY_NEW_TASK != 0)
+        assertEquals(BLOCKED_PACKAGE, startedPackage)
     }
 
     @Test
-    fun launcher_returnsSkip_andDoesNotStartActivity_forUnblockedPackage() {
+    fun launcher_returnsSkip_andDoesNotInvokeOnIntervene_forUnblockedPackage() {
         val launcher = launcherFor(
             blocked = emptySet(),
-            starter = { error("Should not be called for unblocked package") },
+            onIntervene = { error("Should not be called for unblocked package") },
         )
 
         val decision = launcher.onForegroundApp(UNBLOCKED_PACKAGE)
@@ -107,7 +97,7 @@ class InterventionFlowTest {
 
     private fun launcherFor(
         blocked: Set<String>,
-        starter: (Intent) -> Unit,
+        onIntervene: (String) -> Unit,
     ): InterventionLauncher {
         val store = InMemoryBlocklistStore()
         runBlocking {
@@ -121,11 +111,18 @@ class InterventionFlowTest {
             ownPackage = mainContext.packageName,
         )
         return InterventionLauncher(
-            context = mainContext,
             engine = engine,
             clock = clock,
-            activityStarter = starter,
+            onIntervene = onIntervene,
         )
+    }
+
+    private fun startInterventionActivity(packageName: String) {
+        val intent = Intent(mainContext, InterventionActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            putExtra(InterventionActivity.EXTRA_PACKAGE_NAME, packageName)
+        }
+        mainContext.startActivity(intent)
     }
 
     private fun launchTarget() {

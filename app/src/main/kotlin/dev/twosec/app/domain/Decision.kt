@@ -11,4 +11,5 @@ enum class SkipReason {
     Whitelisted,
     IgnoredPackage,
     OwnPackage,
+    AlreadyInForeground,
 }
