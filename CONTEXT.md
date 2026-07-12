@@ -1,0 +1,32 @@
+# Context
+
+two-sec is a free, on-device Android app that inserts a brief pause between a user and the apps they tend to open on autopilot. When the user opens a chosen app, two-sec shows a breathing screen for a few seconds, then lets them continue or close (back to the home screen).
+
+This file is the single source of truth for domain vocabulary. Use the terms here in code, tests, and tickets. If a concept does not appear here, the implementer is either inventing language the project does not use (reconsider) or has found a real gap (add the term).
+
+## Glossary
+
+- **App**: a user-installed Android application (e.g. Instagram, TikTok, Reddit). Identified by its package name.
+- **Blocklist**: the set of package names the user has chosen to block. The engine never blocks anything not in the blocklist.
+- **BlockerEngine**: the pure decision function. Given `(packageName, now)`, returns either `Intervene` or `Skip(reason)`. Constructed with a `BlocklistStore`, a `Clock`, an ignored-package set, and the app's own package name. Highest testable seam.
+- **BlockerAccessibilityService**: the `AccessibilityService` subclass that subscribes to `TYPE_WINDOW_STATE_CHANGED` and forwards foregrounded package names to the `BlockerEngine`. Owns no decision logic.
+- **BlocklistStore**: the persistence seam for the master toggle, the blocklist, and the per-package whitelist expiry timestamps. Exposes `Flow`s for reads and `suspend` writes. Production implementation: `DataStoreBlocklistStore`. Test fake: `InMemoryBlocklistStore`.
+- **BootReceiver**: the `BroadcastReceiver` registered for `BOOT_COMPLETED` and `LOCKED_BOOT_COMPLETED`. Its only job is to renew the `BlockerAccessibilityService` subscription after a reboot.
+- **Clock**: a `fun interface` with a single `now(): Long` method. Production: `SystemClock`. Test fake: `FakeClock`. The decision and intervention code use it instead of `System.currentTimeMillis()`.
+- **ConfigActivity** (V1: `MainActivity`): the single configuration screen. Master toggle, installed-app checklist, static requirements section.
+- **ConfigViewModel**: the `ViewModel` for `ConfigActivity`. Combines the master toggle flow, the blocklist flow, and the installed-apps snapshot into a single `ConfigUiState` and exposes toggle/check callbacks.
+- **ConfigUiState**: the rendered state of the config screen — master toggle, installed apps, current blocklist, loading flag.
+- **InstalledApp**: a UI-layer value type with a `packageName` and a `label`, produced by `InstalledAppsProvider`.
+- **InstalledAppsProvider**: a thin wrapper over `PackageManager` that returns the launchable user apps on the device. The only place in the app that reads `PackageManager` to enumerate user apps.
+- **Decision**: the return type of `BlockerEngine.decide(packageName, now)`. Sealed type with `Intervene` and `Skip(reason)` variants, where `reason` covers `MasterOff`, `NotInBlocklist`, `Whitelisted`, `IgnoredPackage`, `OwnPackage`.
+- **Effect**: a side-effect the intervention state machine requests the activity to perform. `ShowButtons`, `HideButtons`, `FinishActivity`, `GoHome`, `WhitelistPackage(packageName, until)`.
+- **Intervention**: the five-second pause the user sees when they open a blocked app. Renders a fixed prompt, suppresses the Back button, and shows Continue/Close buttons only after the countdown completes.
+- **InterventionActivity**: the full-screen, opaque activity that renders the intervention. The only place on the intervention path that touches the `Activity` lifecycle, `setContentView`, or `Handler`.
+- **InterventionEvent**: an input to the intervention state machine. `Tick(now)`, `UserTappedContinue`, `UserTappedClose`, `BackPressed`, `ScreenDestroyed`.
+- **InterventionStateMachine**: the pure state machine that owns the intervention flow. Given a stream of `InterventionEvent`s, returns a stream of `InterventionViewState`s and `InterventionEffect`s. Second testable seam.
+- **InterventionViewState**: the rendered state of the intervention. `Counting(millisRemaining)` or `AwaitingChoice`.
+- **Master toggle**: the on/off switch for the entire blocker. When off, the engine always returns `Skip(MasterOff)`.
+- **Skip(reason)**: the `Decision` variant that means the engine chose not to intervene. The `reason` is one of `MasterOff`, `NotInBlocklist`, `Whitelisted`, `IgnoredPackage`, `OwnPackage`.
+- **ViewState**: short for `InterventionViewState` in the intervention context.
+- **Whitelist expiry**: a future timestamp until which a package is exempt from blocking. Set by the intervention when the user taps Continue (now + 30s). Read by the engine on every event.
+- **WhitelistGate**: the small helper that records and queries whitelist expiries. Delegates to `BlocklistStore` for persistence and uses the injected `Clock` for time.

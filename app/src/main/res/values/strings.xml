@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">two-sec</string>
+    <string name="screen_header">two-sec</string>
+    <string name="master_toggle_label">Block apps</string>
+    <string name="blocklist_header">Apps</string>
+    <string name="blocklist_empty">No apps installed.</string>
+    <string name="setup_header">Setup</string>
+    <string name="setup_step_accessibility">1. Enable Accessibility permission: System Settings → Accessibility → two-sec → Use.</string>
+    <string name="setup_step_battery">2. Disable battery optimization: System Settings → Apps → two-sec → Battery → Unrestricted.</string>
+</resources>
