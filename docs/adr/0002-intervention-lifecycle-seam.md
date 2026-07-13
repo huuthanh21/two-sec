@@ -38,7 +38,7 @@ As a side effect of the same pass, the activity's `processEventsReversed(events:
 - The intervention lifecycle is named and local. Lifecycle bugs live in one module, behind one interface, with one test surface.
 - The `Skip(AlreadyInForeground)` filter becomes a property of the session state, not a comparison on a sticky field. Tests assert on state, not on a callback.
 - The activity's effect-application logic is a `forEach`; the state machine owns effect ordering. The reversal goes away; the dead `List<InterventionEvent>` parameter goes with it.
-- One new file: `InterventionLifecycle.kt`. One new test file: `InterventionLifecycleTest.kt`.
+- One new file pair: `InterventionLifecycle.kt` + `SessionState.kt`. One new test file: `InterventionLifecycleTest.kt`.
 - One file deleted: `InterventionLauncher.kt` and its test.
 - The state machine swaps the order of effects for `UserTappedContinue` and `UserTappedClose`/`BackPressed`; `InterventionStateMachineTest` updates its expected lists for those three cases.
 - The seam table in ADR-0001 grows by one row.

@@ -136,6 +136,26 @@ class InterventionLifecycleTest {
     }
 
     @Test
+    fun `PR5 regression full sequence Continue then in-app nav does not re-intervene`() = runTest {
+        assertTrue(lifecycle.onForegroundApp(BLOCKED) is Decision.Intervene)
+        assertEquals(SessionState.PendingIntervention(BLOCKED), lifecycle.state)
+
+        lifecycle.onInterventionShown(BLOCKED)
+        assertEquals(SessionState.InIntervention(BLOCKED), lifecycle.state)
+
+        clock.set(1_000L)
+        store.setWhitelistExpiry(BLOCKED, untilMs = 31_000L)
+
+        lifecycle.onInterventionDismissed(BLOCKED)
+        assertEquals(SessionState.Idle, lifecycle.state)
+
+        clock.set(2_000L)
+        val inAppNav = lifecycle.onForegroundApp(BLOCKED)
+        assertEquals(Decision.Skip(SkipReason.Whitelisted), inAppNav)
+        assertEquals(SessionState.InForeground(BLOCKED), lifecycle.state)
+    }
+
+    @Test
     fun `onInterventionShown from Idle is a no-op`() {
         lifecycle.onInterventionShown(BLOCKED)
 

@@ -23,6 +23,7 @@ Adopt three independent seams, each as a Kotlin `interface` in the `data` packag
 | Persistence | `BlocklistStore` | `DataStoreBlocklistStore` | `InMemoryBlocklistStore` |
 | Decision (ticket 02) | `BlockerEngine` | direct impl | direct impl (pure) |
 | Intervention flow (ticket 03) | `InterventionStateMachine` | direct impl | direct impl (pure) |
+| Session state (ADR-0002) | `InterventionLifecycle` | direct impl | direct impl (pure) |
 
 The Android side (ticket 04) consumes these interfaces and adds no decision logic of its own.
 
