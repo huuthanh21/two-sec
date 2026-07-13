@@ -42,27 +42,6 @@ class InterventionLauncherTest {
     }
 
     @Test
-    fun `repeated call for same blocked package returns AlreadyInForeground and does not invoke onIntervene`() = runTest {
-        launcher.onForegroundApp(BLOCKED_PACKAGE)
-        interveneCalls.clear()
-
-        val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
-
-        assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), decision)
-        assertEquals(emptyList<String>(), interveneCalls)
-    }
-
-    @Test
-    fun `three consecutive calls for same package only invoke onIntervene once`() = runTest {
-        launcher.onForegroundApp(BLOCKED_PACKAGE)
-        launcher.onForegroundApp(BLOCKED_PACKAGE)
-        val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
-
-        assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), decision)
-        assertEquals(listOf(BLOCKED_PACKAGE), interveneCalls)
-    }
-
-    @Test
     fun `call for different package after blocked runs engine and does not invoke onIntervene for unblocked`() = runTest {
         launcher.onForegroundApp(BLOCKED_PACKAGE)
         interveneCalls.clear()
@@ -121,6 +100,37 @@ class InterventionLauncherTest {
 
         assertEquals(Decision.Skip(SkipReason.NotInBlocklist), decision)
         assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), repeat)
+        assertEquals(emptyList<String>(), interveneCalls)
+    }
+
+    @Test
+    fun `reopening blocked package after intervention invokes onIntervene again when no other foreground event fires`() = runTest {
+        launcher.onForegroundApp(BLOCKED_PACKAGE)
+        interveneCalls.clear()
+
+        val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
+
+        assertTrue(
+            "Reopening blocked package after intervention should Intervene; got $decision",
+            decision is Decision.Intervene,
+        )
+        assertEquals(listOf(BLOCKED_PACKAGE), interveneCalls)
+    }
+
+    @Test
+    fun `in-app navigation after Continue is still filtered as AlreadyInForeground`() = runTest {
+        launcher.onForegroundApp(BLOCKED_PACKAGE)
+        clock.set(1_000L)
+        store.setWhitelistExpiry(BLOCKED_PACKAGE, untilMs = 30_000L)
+        clock.set(2_000L)
+
+        val back = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.Whitelisted), back)
+        interveneCalls.clear()
+
+        val inApp = launcher.onForegroundApp(BLOCKED_PACKAGE)
+
+        assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), inApp)
         assertEquals(emptyList<String>(), interveneCalls)
     }
 
