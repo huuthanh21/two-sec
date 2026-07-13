@@ -19,7 +19,10 @@ class InterventionLauncher(
         }
         lastForegroundPackage = packageName
         val decision = engine.decide(packageName, clock.now())
-        if (decision is Decision.Intervene) onIntervene(packageName)
+        if (decision is Decision.Intervene) {
+            lastForegroundPackage = null
+            onIntervene(packageName)
+        }
         return decision
     }
 }
