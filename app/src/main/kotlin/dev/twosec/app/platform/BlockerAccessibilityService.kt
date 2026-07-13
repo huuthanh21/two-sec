@@ -4,21 +4,10 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import dev.twosec.app.TwoSecApp
+import dev.twosec.app.domain.Decision
 import dev.twosec.app.ui.InterventionActivity
 
 class BlockerAccessibilityService : AccessibilityService() {
-
-    private var launcher: InterventionLauncher? = null
-
-    override fun onCreate() {
-        super.onCreate()
-        val app = application as TwoSecApp
-        launcher = InterventionLauncher(
-            engine = app.blockerEngine,
-            clock = app.clock,
-            onIntervene = ::startInterventionActivity,
-        )
-    }
 
     override fun onInterrupt() = Unit
 
@@ -26,7 +15,11 @@ class BlockerAccessibilityService : AccessibilityService() {
         if (event == null) return
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val packageName = event.packageName?.toString() ?: return
-        launcher?.onForegroundApp(packageName)
+        val app = application as TwoSecApp
+        val decision = app.interventionLifecycle.onForegroundApp(packageName)
+        if (decision is Decision.Intervene) {
+            startInterventionActivity(packageName)
+        }
     }
 
     private fun startInterventionActivity(packageName: String) {
