@@ -105,15 +105,15 @@ class InterventionStateMachineTest {
 
         assertEquals(
             listOf<InterventionEffect>(
-                InterventionEffect.FinishActivity,
                 InterventionEffect.GoHome,
+                InterventionEffect.FinishActivity,
             ),
             effects,
         )
     }
 
     @Test
-    fun `UserTappedContinue in AwaitingChoice emits FinishActivity and WhitelistPackage with clock now plus 30s`() {
+    fun `UserTappedContinue in AwaitingChoice emits WhitelistPackage then FinishActivity with clock now plus 30s`() {
         val (sm, clock) = newMachine()
         sm.process(InterventionEvent.Tick(now = 5_000L))
         clock.advance(7_000L)
@@ -122,15 +122,15 @@ class InterventionStateMachineTest {
 
         assertEquals(
             listOf<InterventionEffect>(
-                InterventionEffect.FinishActivity,
                 InterventionEffect.WhitelistPackage(PACKAGE, until = 37_000L),
+                InterventionEffect.FinishActivity,
             ),
             effects,
         )
     }
 
     @Test
-    fun `UserTappedClose in AwaitingChoice emits FinishActivity and GoHome`() {
+    fun `UserTappedClose in AwaitingChoice emits GoHome then FinishActivity`() {
         val (sm, _) = newMachine()
         sm.process(InterventionEvent.Tick(now = 5_000L))
 
@@ -138,8 +138,8 @@ class InterventionStateMachineTest {
 
         assertEquals(
             listOf<InterventionEffect>(
-                InterventionEffect.FinishActivity,
                 InterventionEffect.GoHome,
+                InterventionEffect.FinishActivity,
             ),
             effects,
         )

@@ -64,6 +64,7 @@ class InterventionActivity : ComponentActivity() {
             clock = clock,
         )
         stateMachine.initialEffects.forEach { applyEffect(it) }
+        app.interventionLifecycle.onInterventionShown(packageName)
         viewState = stateMachine.state
 
         setContent {
@@ -80,27 +81,18 @@ class InterventionActivity : ComponentActivity() {
     override fun onDestroy() {
         handler.removeCallbacks(tickRunnable)
         stateMachine.process(InterventionEvent.ScreenDestroyed)
+        val app = application as TwoSecApp
+        app.interventionLifecycle.onInterventionDismissed(packageName)
         super.onDestroy()
     }
 
-    private fun onUserContinue() {
-        processEventsReversed(listOf(InterventionEvent.UserTappedContinue))
+    private fun processEvent(event: InterventionEvent) {
+        stateMachine.process(event).forEach { applyEffect(it) }
     }
 
-    private fun onUserClose() {
-        processEventsReversed(listOf(InterventionEvent.UserTappedClose))
-    }
-
-    private fun handleBackPressed() {
-        processEventsReversed(listOf(InterventionEvent.BackPressed))
-    }
-
-    private fun processEventsReversed(events: List<InterventionEvent>) {
-        for (event in events) {
-            val effects = stateMachine.process(event)
-            for (effect in effects.reversed()) applyEffect(effect)
-        }
-    }
+    private fun onUserContinue() = processEvent(InterventionEvent.UserTappedContinue)
+    private fun onUserClose() = processEvent(InterventionEvent.UserTappedClose)
+    private fun handleBackPressed() = processEvent(InterventionEvent.BackPressed)
 
     private fun applyEffect(effect: InterventionEffect) {
         when (effect) {
