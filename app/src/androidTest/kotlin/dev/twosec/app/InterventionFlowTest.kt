@@ -12,7 +12,8 @@ import dev.twosec.app.data.InMemoryBlocklistStore
 import dev.twosec.app.data.SystemClock
 import dev.twosec.app.domain.BlockerEngine
 import dev.twosec.app.domain.Decision
-import dev.twosec.app.platform.InterventionLauncher
+import dev.twosec.app.domain.InterventionLifecycle
+import dev.twosec.app.domain.SessionState
 import dev.twosec.app.platform.SystemPackages
 import dev.twosec.app.ui.InterventionActivity
 import kotlinx.coroutines.runBlocking
@@ -47,45 +48,40 @@ class InterventionFlowTest {
 
     @Test
     fun launchingBlockedTargetApp_triggersInterventionActivity() {
-        val launcher = launcherFor(
-            blocked = setOf(BLOCKED_PACKAGE),
-            onIntervene = { packageName -> startInterventionActivity(packageName) },
-        )
+        val lifecycle = lifecycleFor(blocked = setOf(BLOCKED_PACKAGE))
 
         launchTarget()
 
-        val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        val decision = lifecycle.onForegroundApp(BLOCKED_PACKAGE)
         assertTrue(
             "Engine should Intervene for blocked package; got $decision",
             decision is Decision.Intervene,
         )
 
+        startInterventionActivity(BLOCKED_PACKAGE)
+        lifecycle.onInterventionShown(BLOCKED_PACKAGE)
+
         waitForTopPackage("dev.twosec.app", timeoutMs = 5_000L)
     }
 
     @Test
-    fun launcher_returnsIntervene_andCallsOnIntervene_withBlockedPackageName() {
-        var startedPackage: String? = null
-        val launcher = launcherFor(
-            blocked = setOf(BLOCKED_PACKAGE),
-            onIntervene = { packageName -> startedPackage = packageName },
-        )
+    fun lifecycle_returnsIntervene_andTransitionsToPendingIntervention_forBlockedPackage() {
+        val lifecycle = lifecycleFor(blocked = setOf(BLOCKED_PACKAGE))
 
-        val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        val decision = lifecycle.onForegroundApp(BLOCKED_PACKAGE)
 
         assertTrue("Engine should Intervene for blocked package; got $decision", decision is Decision.Intervene)
-        assertEquals(BLOCKED_PACKAGE, startedPackage)
+        assertEquals(SessionState.PendingIntervention(BLOCKED_PACKAGE), lifecycle.state)
     }
 
     @Test
-    fun launcher_returnsSkip_andDoesNotInvokeOnIntervene_forUnblockedPackage() {
-        val launcher = launcherFor(
-            blocked = emptySet(),
-            onIntervene = { error("Should not be called for unblocked package") },
-        )
+    fun lifecycle_returnsSkip_andTransitionsToInForeground_forUnblockedPackage() {
+        val lifecycle = lifecycleFor(blocked = emptySet())
 
-        val decision = launcher.onForegroundApp(UNBLOCKED_PACKAGE)
+        val decision = lifecycle.onForegroundApp(UNBLOCKED_PACKAGE)
+
         assertTrue("Engine should Skip for unblocked package; got $decision", decision is Decision.Skip)
+        assertEquals(SessionState.InForeground(UNBLOCKED_PACKAGE), lifecycle.state)
     }
 
     @Test
@@ -95,10 +91,9 @@ class InterventionFlowTest {
         assertTrue("InterventionActivity should be registered in main manifest", activities.isNotEmpty())
     }
 
-    private fun launcherFor(
+    private fun lifecycleFor(
         blocked: Set<String>,
-        onIntervene: (String) -> Unit,
-    ): InterventionLauncher {
+    ): InterventionLifecycle {
         val store = InMemoryBlocklistStore()
         runBlocking {
             store.setMasterEnabled(true)
@@ -110,10 +105,9 @@ class InterventionFlowTest {
             ignoredPackages = SystemPackages.ignored,
             ownPackage = mainContext.packageName,
         )
-        return InterventionLauncher(
+        return InterventionLifecycle(
             engine = engine,
             clock = clock,
-            onIntervene = onIntervene,
         )
     }
 
