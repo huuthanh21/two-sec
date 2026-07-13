@@ -6,6 +6,7 @@ import dev.twosec.app.data.Clock
 import dev.twosec.app.data.DataStoreBlocklistStore
 import dev.twosec.app.data.SystemClock
 import dev.twosec.app.domain.BlockerEngine
+import dev.twosec.app.domain.InterventionLifecycle
 import dev.twosec.app.domain.WhitelistGate
 import dev.twosec.app.platform.InstalledAppsProvider
 import dev.twosec.app.platform.SystemPackages
@@ -30,6 +31,9 @@ class TwoSecApp : Application() {
     lateinit var whitelistGate: WhitelistGate
         private set
 
+    lateinit var interventionLifecycle: InterventionLifecycle
+        private set
+
     lateinit var appScope: CoroutineScope
         private set
 
@@ -45,5 +49,9 @@ class TwoSecApp : Application() {
             ownPackage = packageName,
         )
         whitelistGate = WhitelistGate(blocklistStore)
+        interventionLifecycle = InterventionLifecycle(
+            engine = blockerEngine,
+            clock = clock,
+        )
     }
 }

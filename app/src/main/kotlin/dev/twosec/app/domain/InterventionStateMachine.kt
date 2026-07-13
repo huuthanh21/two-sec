@@ -36,16 +36,16 @@ class InterventionStateMachine(
     private fun onTappedContinue(): List<InterventionEffect> {
         if (state !is InterventionViewState.AwaitingChoice) return emptyList()
         return listOf(
-            InterventionEffect.FinishActivity,
             InterventionEffect.WhitelistPackage(packageName, clock.now() + WHITELIST_MS),
+            InterventionEffect.FinishActivity,
         )
     }
 
     private fun onTappedCloseOrBack(): List<InterventionEffect> {
         if (state !is InterventionViewState.AwaitingChoice) return emptyList()
         return listOf(
-            InterventionEffect.FinishActivity,
             InterventionEffect.GoHome,
+            InterventionEffect.FinishActivity,
         )
     }
 
