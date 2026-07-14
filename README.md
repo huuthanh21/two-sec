@@ -56,7 +56,7 @@ The full domain vocabulary lives in [CONTEXT.md](CONTEXT.md), and the architectu
 ```
 
 > [!IMPORTANT]
-> Instrumented tests need a device reachable by `adb`. The simplest way is wireless debugging: enable it under *Developer options → Wireless debugging*, then `adb pair <IP:pairing-port>` followed by `adb connect <IP:port>`. Keep the phone unlocked while `adb install` runs.
+> Instrumented tests need a device reachable by `adb`. Use the local emulator setup: `./scripts/manage-emulator.sh` to boot the emulator.
 
 JDK 17 and the Android SDK (platform 34, build-tools 34) are required. The Gradle wrapper pins the toolchain.
 

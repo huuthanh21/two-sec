@@ -17,29 +17,13 @@
 
 3 tests cover `DataStoreBlocklistStore` round-trips through `DataStore<Preferences>`.
 
-### Wireless ADB (no USB)
+### Emulator setup
 
-1. On phone: **Developer options** → **Wireless debugging** → enable → tap the pairing code.
-2. Pair (one-time):
-
-    ```bash
-    export JAVA_HOME=/home/trht/.local/jdk17
-    export ANDROID_HOME=/home/trht/.local/android-sdk
-    export PATH=$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH
-
-    adb pair <IP:pairing-port>
-    # Enter the 6-digit pairing code shown on the phone
-    ```
-
-3. Connect:
-
-    ```bash
-    adb connect <IP:port>
-    # Use the main port shown on the phone (different from the pairing port)
-    adb devices -l   # confirm the device is listed
-    ```
-
-4. **Keep the phone screen unlocked** during install — Android prompts for install permission, and `adb install` fails silently if the phone is locked or the prompt is ignored.
+Start the local KVM emulator:
+```bash
+./scripts/manage-emulator.sh
+```
+This boots AVD `compose_debug` and waits for it to be ready.
 
 ### `close()` and DataStore scope
 

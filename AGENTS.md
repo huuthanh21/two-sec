@@ -26,7 +26,10 @@ Single-context: one `CONTEXT.md` at the repo root, plus `docs/adr/`. See `docs/a
 - **Instrumented tests** (device or emulator): `./gradlew :app:connectedDebugAndroidTest`
 - **Lint**: `./gradlew :app:lintDebug`
 
-Before running instrumented tests, ensure a device is connected via wireless ADB (`adb pair` + `adb connect`) or USB. Keep the phone screen unlocked during install. See `docs/agents/testing.md` for the full workflow and for notes on the DataStore close/reopen pattern in tests.
+Before running instrumented tests, ensure a device is connected (e.g. running the local emulator). See `docs/agents/testing.md` for the full workflow and for notes on the DataStore close/reopen pattern in tests.
+
+### Emulator debugging
+See [AGENTS.emulator-debug.md](file:///home/huuthanh21/repos/two-sec/AGENTS.emulator-debug.md) for using local high-efficiency KVM emulators, log streams, and layout dumps.
 
 ## Git identity
 
