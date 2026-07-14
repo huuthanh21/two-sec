@@ -134,6 +134,54 @@ class InterventionLauncherTest {
         assertEquals(emptyList<String>(), interveneCalls)
     }
 
+    @Test
+    fun `blocked app reopened after clearLastForeground re-runs the engine and intervenes`() = runTest {
+        launcher.onForegroundApp(BLOCKED_PACKAGE)
+        interveneCalls.clear()
+
+        launcher.clearLastForeground()
+
+        val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
+
+        assertTrue(
+            "Blocked app reopened after clearLastForeground should Intervene; got $decision",
+            decision is Decision.Intervene,
+        )
+        assertEquals(listOf(BLOCKED_PACKAGE), interveneCalls)
+    }
+
+    @Test
+    fun `reopening blocked package after whitelist expires should intervene even if no other package was foregrounded`() = runTest {
+        // First open: Intervene
+        launcher.onForegroundApp(BLOCKED_PACKAGE)
+        interveneCalls.clear()
+
+        // User continues, whitelisting the package
+        clock.set(1_000L)
+        store.setWhitelistExpiry(BLOCKED_PACKAGE, untilMs = 30_000L)
+        clock.set(2_000L)
+
+        // The app is launched/resumed under whitelist
+        val decision = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.Whitelisted), decision)
+        interveneCalls.clear()
+
+        // Simulate home: null package name event
+        launcher.clearLastForeground()
+
+        // Whitelist expires
+        clock.set(35_000L)
+
+        // User reopen the app
+        val decision2 = launcher.onForegroundApp(BLOCKED_PACKAGE)
+
+        assertTrue(
+            "Reopening blocked package after whitelist expires should Intervene; got $decision2",
+            decision2 is Decision.Intervene,
+        )
+        assertEquals(listOf(BLOCKED_PACKAGE), interveneCalls)
+    }
+
     private companion object {
         const val BLOCKED_PACKAGE = "com.example.blocked"
         const val UNBLOCKED_PACKAGE = "com.example.unblocked"

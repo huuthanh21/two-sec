@@ -25,8 +25,16 @@ class BlockerAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        val packageName = event.packageName?.toString() ?: return
+        val packageName = event.packageName?.toString()
+        if (packageName == null) {
+            launcher?.clearLastForeground()
+            return
+        }
         launcher?.onForegroundApp(packageName)
+    }
+
+    internal fun setLauncherForTesting(launcher: InterventionLauncher) {
+        this.launcher = launcher
     }
 
     private fun startInterventionActivity(packageName: String) {

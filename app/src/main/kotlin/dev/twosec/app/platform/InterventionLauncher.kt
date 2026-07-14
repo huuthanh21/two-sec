@@ -20,9 +20,13 @@ class InterventionLauncher(
         lastForegroundPackage = packageName
         val decision = engine.decide(packageName, clock.now())
         if (decision is Decision.Intervene) {
-            lastForegroundPackage = null
+            clearLastForeground()
             onIntervene(packageName)
         }
         return decision
+    }
+
+    fun clearLastForeground() {
+        lastForegroundPackage = null
     }
 }
