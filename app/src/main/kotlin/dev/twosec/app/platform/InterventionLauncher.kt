@@ -21,9 +21,14 @@ class InterventionLauncher(
         val previous = lastForegroundPackage
         lastForegroundPackage = packageName
         val decision = engine.decide(packageName, clock.now())
-        if (decision is Decision.Intervene) {
-            lastForegroundPackage = null
-            onIntervene(packageName)
+        when {
+            decision is Decision.Intervene -> {
+                lastForegroundPackage = null
+                onIntervene(packageName)
+            }
+            decision is Decision.Skip && decision.reason == SkipReason.IgnoredPackage -> {
+                lastForegroundPackage = previous
+            }
         }
         Timber.d("onForegroundApp old=%s new=%s decision=%s", previous, packageName, decision)
         return decision
