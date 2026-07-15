@@ -17,7 +17,7 @@ class InterventionLauncherTest {
     private val clock = FakeClock(initialNow = 0L)
     private val engine = BlockerEngine(
         store = store,
-        ignoredPackages = emptySet(),
+        ignoredPackages = setOf(IME_PACKAGE),
         ownPackage = OWN_PACKAGE,
     )
     private val interveneCalls = mutableListOf<String>()
@@ -92,14 +92,14 @@ class InterventionLauncherTest {
     }
 
     @Test
-    fun `unblocked package does not invoke onIntervene and records last foreground`() = runTest {
+    fun `unblocked package does not invoke onIntervene and is not recorded as last foreground`() = runTest {
         val decision = launcher.onForegroundApp(UNBLOCKED_PACKAGE)
         interveneCalls.clear()
 
         val repeat = launcher.onForegroundApp(UNBLOCKED_PACKAGE)
 
         assertEquals(Decision.Skip(SkipReason.NotInBlocklist), decision)
-        assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), repeat)
+        assertEquals(Decision.Skip(SkipReason.NotInBlocklist), repeat)
         assertEquals(emptyList<String>(), interveneCalls)
     }
 
@@ -134,9 +134,39 @@ class InterventionLauncherTest {
         assertEquals(emptyList<String>(), interveneCalls)
     }
 
+    @Test
+    fun `ime window between in-app navigation does not clobber last foreground for blocked app`() = runTest {
+        launcher.onForegroundApp(BLOCKED_PACKAGE)
+        interveneCalls.clear()
+
+        clock.set(1_000L)
+        store.setWhitelistExpiry(BLOCKED_PACKAGE, untilMs = 5_000L)
+        clock.set(2_000L)
+        launcher.onForegroundApp(BLOCKED_PACKAGE)
+
+        val inApp = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), inApp)
+
+        val ime = launcher.onForegroundApp(IME_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.IgnoredPackage), ime)
+
+        clock.set(10_000L)
+
+        val reopen = launcher.onForegroundApp(BLOCKED_PACKAGE)
+
+        assertEquals(
+            "IME event clobbered lastForegroundPackage; re-opening the same in-app screen " +
+                "should be AlreadyInForeground, not a fresh intervention",
+            Decision.Skip(SkipReason.AlreadyInForeground),
+            reopen,
+        )
+        assertEquals(emptyList<String>(), interveneCalls)
+    }
+
     private companion object {
         const val BLOCKED_PACKAGE = "com.example.blocked"
         const val UNBLOCKED_PACKAGE = "com.example.unblocked"
+        const val IME_PACKAGE = SystemPackages.GOOGLE_LATIN_IME
         const val OWN_PACKAGE = "dev.twosec.app"
     }
 }
