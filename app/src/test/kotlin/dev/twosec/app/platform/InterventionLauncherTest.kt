@@ -163,6 +163,58 @@ class InterventionLauncherTest {
         assertEquals(emptyList<String>(), interveneCalls)
     }
 
+    @Test
+    fun `notInBlocklist transient between in-app navigation does not clobber last foreground for blocked app`() = runTest {
+        launcher.onForegroundApp(BLOCKED_PACKAGE)
+        interveneCalls.clear()
+
+        clock.set(1_000L)
+        store.setWhitelistExpiry(BLOCKED_PACKAGE, untilMs = 3_000L)
+        clock.set(2_000L)
+        val whitelisted = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.Whitelisted), whitelisted)
+
+        val transient = launcher.onForegroundApp(UNBLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.NotInBlocklist), transient)
+
+        clock.set(5_000L)
+
+        val reopen = launcher.onForegroundApp(BLOCKED_PACKAGE)
+
+        assertEquals(
+            "NotInBlocklist transient clobbered lastForegroundPackage; returning to the " +
+                "blocklisted app should be AlreadyInForeground, not a fresh intervention",
+            Decision.Skip(SkipReason.AlreadyInForeground),
+            reopen,
+        )
+        assertEquals(emptyList<String>(), interveneCalls)
+    }
+
+    @Test
+    fun `returning to blocked package past grace window re-intervenes`() = runTest {
+        launcher.onForegroundApp(BLOCKED_PACKAGE)
+        interveneCalls.clear()
+
+        clock.set(1_000L)
+        store.setWhitelistExpiry(BLOCKED_PACKAGE, untilMs = 3_000L)
+        clock.set(2_000L)
+        val whitelisted = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.Whitelisted), whitelisted)
+
+        val transient = launcher.onForegroundApp(UNBLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.NotInBlocklist), transient)
+
+        clock.set(70_000L)
+
+        val back = launcher.onForegroundApp(BLOCKED_PACKAGE)
+
+        assertTrue(
+            "Past the grace window, returning to the blocklisted app should re-intervene; got $back",
+            back is Decision.Intervene,
+        )
+        assertEquals(listOf(BLOCKED_PACKAGE), interveneCalls)
+    }
+
     private companion object {
         const val BLOCKED_PACKAGE = "com.example.blocked"
         const val UNBLOCKED_PACKAGE = "com.example.unblocked"

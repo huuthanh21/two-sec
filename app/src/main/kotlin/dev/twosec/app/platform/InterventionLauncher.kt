@@ -12,22 +12,28 @@ class InterventionLauncher(
     private val onIntervene: (packageName: String) -> Unit,
 ) {
 
-    private var lastForegroundPackage: String? = null
+    private data class ForegroundState(val packageName: String, val atMs: Long)
+
+    private var lastForeground: ForegroundState? = null
 
     fun onForegroundApp(packageName: String): Decision {
-        if (packageName == lastForegroundPackage) {
+        val now = clock.now()
+        val previous = lastForeground
+        if (previous != null &&
+            previous.packageName == packageName &&
+            now - previous.atMs < GRACE_MS
+        ) {
             return Decision.Skip(SkipReason.AlreadyInForeground)
         }
-        val previous = lastForegroundPackage
-        val decision = engine.decide(packageName, clock.now())
+        val decision = engine.decide(packageName, now)
         when (decision) {
             is Decision.Intervene -> {
-                lastForegroundPackage = null
+                lastForeground = null
                 onIntervene(packageName)
             }
             is Decision.Skip -> when (decision.reason) {
-                SkipReason.Whitelisted -> lastForegroundPackage = packageName
-                SkipReason.NotInBlocklist -> lastForegroundPackage = null
+                SkipReason.Whitelisted -> lastForeground = ForegroundState(packageName, now)
+                SkipReason.NotInBlocklist,
                 SkipReason.IgnoredPackage,
                 SkipReason.MasterOff,
                 SkipReason.OwnPackage,
@@ -36,7 +42,11 @@ class InterventionLauncher(
                 -> Unit
             }
         }
-        Timber.d("onForegroundApp old=%s new=%s decision=%s", previous, packageName, decision)
+        Timber.d("onForegroundApp old=%s new=%s decision=%s", previous?.packageName, packageName, decision)
         return decision
+    }
+
+    private companion object {
+        const val GRACE_MS = 60_000L
     }
 }
