@@ -7,6 +7,7 @@
     <string name="blocklist_no_match">No apps match \"%1$s\".</string>
     <string name="search_apps_placeholder">Search apps</string>
     <string name="search_clear">Clear search</string>
+    <string name="app_check_label">Block %1$s</string>
     <string name="setup_header">Setup</string>
     <string name="setup_step_accessibility">1. Enable Accessibility permission: System Settings → Accessibility → two-sec → Use.</string>
     <string name="setup_step_battery">2. Disable battery optimization: System Settings → Apps → two-sec → Battery → Unrestricted.</string>

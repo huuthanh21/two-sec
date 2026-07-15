@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.twosec.app.R
@@ -152,10 +153,16 @@ class InterventionActivity : ComponentActivity() {
                     )
                 }
                 if (showButtons) {
-                    Button(onClick = onContinue) {
+                    Button(
+                        onClick = onContinue,
+                        modifier = Modifier.testTag("intervention_continue"),
+                    ) {
                         Text(stringResource(R.string.intervention_continue))
                     }
-                    Button(onClick = onClose) {
+                    Button(
+                        onClick = onClose,
+                        modifier = Modifier.testTag("intervention_close"),
+                    ) {
                         Text(stringResource(R.string.intervention_close))
                     }
                 }
