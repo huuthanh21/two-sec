@@ -32,7 +32,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.twosec.app.R
@@ -73,7 +76,9 @@ private fun ConfigScreenContent(
         )
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics(mergeDescendants = true) {},
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -84,6 +89,7 @@ private fun ConfigScreenContent(
             Switch(
                 checked = state.masterOn,
                 onCheckedChange = onMasterToggle,
+                modifier = Modifier.testTag("master_toggle"),
             )
         }
 
@@ -181,7 +187,10 @@ private fun AppSearchField(
                 },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
+                        IconButton(
+                            onClick = { onQueryChange("") },
+                            modifier = Modifier.testTag("search_clear"),
+                        ) {
                             Icon(
                                 imageVector = Icons.Filled.Close,
                                 contentDescription = stringResource(R.string.search_clear),
@@ -203,6 +212,7 @@ private fun AppRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val blockLabel = stringResource(R.string.app_check_label, app.label)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -212,6 +222,9 @@ private fun AppRow(
         Checkbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            modifier = Modifier
+                .semantics { contentDescription = blockLabel }
+                .testTag("app_checkbox:${app.packageName}"),
         )
         Spacer(Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {

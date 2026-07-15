@@ -46,6 +46,58 @@ Dump the active Compose UI hierarchy tree to `compose_layout.xml`:
 ./scripts/dump-layout.sh
 ```
 
+## UI driving — `scripts/click.py`
+
+For E2E testing and AI-driven debug loops, the dump-then-tap loop is four `adb` round-trips (`uiautomator dump` → read XML → compute center → `input tap`). `click.py` collapses that into one command:
+
+```bash
+./scripts/click.py --text "Continue"
+```
+
+Each invocation dumps the current UI, finds a node matching the selector, computes the center of its `bounds`, taps it, sleeps `--wait` seconds (default `0.5`), and prints a one-line confirmation to stdout. Stdlib only.
+
+### Flags
+
+- `--text "<text>"` / `--id "<resource-id-substring>"` / `--coords "X,Y"` — exactly one required, mutually exclusive. `--coords` is an escape hatch that skips the XML lookup entirely; use it for clickable nodes with no identifying attribute (e.g. icon-only buttons, the master toggle, app checkboxes — the very things the recovery list can't surface). Bounds for these come from `./scripts/dump-layout.sh` + a `grep` for `clickable="true"`.
+- `--xml <path>` — reuse a pre-dumped XML instead of dumping fresh. If omitted, dumps to `compose_layout.xml` in the cwd. Ignored when `--coords` is set.
+- `--serial <serial>` — target device. Falls back to `$ANDROID_SERIAL`, then auto-pick: 1 device → use it, multiple devices → prefer `emulator-*`.
+- `--wait <seconds>` — sleep after the tap so the next call sees a settled UI. Default `0.5`.
+
+### Match resolution (case-insensitive)
+
+1. Exact match on the selector attribute.
+2. Substring fallback if no exact hit.
+3. If still nothing → exit `1` with a clickable-node dump on stderr (see "Recovery" below).
+
+Multiple matches → tap the first in document order, print a one-line warning on stderr naming the others.
+
+### Exit codes
+
+- `0` — tapped. Stdout: `Tapped text="Continue" at (540, 1620) bounds=[504,1584][576,1656]` (or `Tapped coords (540, 1620)` with `--coords`).
+- `1` — no matching node. Stderr: reason + clickable-node list (see below). Only used by `--text` / `--id`.
+- `2` — no device / `$ANDROID_SERIAL` does not exist (or `--coords` was malformed).
+- `3` — `uiautomator dump`, `adb pull`, or `adb input tap` failed. Raw adb stderr echoed.
+
+### Recovery when the selector is wrong
+
+`click.py` always echoes the available clickable identifiers on `exit 1`, so an agent that miscounts the label can read stderr and retry with the exact string. The list includes any `text=` (or `content-desc=` / `resource-id=`) inside a clickable ancestor, so Compose buttons whose label is a child TextView, icon buttons with no text, and resource-id-only nodes all show up. Each line is prefixed with the source attribute when it isn't `text`:
+
+```
+No node matched text='Continu' (case-insensitive).
+Clickable nodes on screen:
+  [Button] 'Continue'                 bounds=[504,1584][576,1656]
+  [Button] 'Continue to app'          bounds=[420,210][580,250]
+  [Button] 'Close'                    bounds=[504,1784][576,1856]
+  [ImageView] desc='Search'           bounds=[900,100][980,180]
+  [Button] id='com.app:id/save_btn'   bounds=[100,1700][300,1760]
+```
+
+### When the dump itself is the problem
+
+If the agent needs to *inspect* the UI without tapping, fall back to `./scripts/dump-layout.sh` and read `compose_layout.xml` directly. `click.py --xml <path>` will reuse a hand-dumped file the same way it reuses its own.
+
+If the agent needs to tap a node that has no `text`, `content-desc`, or `resource-id` (icon-only buttons, the master toggle, the per-app checkboxes), use `--coords "X,Y"` directly — bounds for these come from the dumped XML, e.g. `./scripts/dump-layout.sh && grep -oE 'clickable="true"[^/]*bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' compose_layout.xml`. The advantage over raw `adb shell input tap` is that `--coords` still respects `--serial` / `$ANDROID_SERIAL` auto-pick and `--wait`.
+
 ## Accessibility event gotchas
 
 The `BlockerAccessibilityService` listens for `TYPE_WINDOW_STATE_CHANGED`. Not every UI transition fires one.
