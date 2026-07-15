@@ -1,6 +1,7 @@
 package dev.twosec.app.domain
 
 import dev.twosec.app.data.BlocklistStore
+import timber.log.Timber
 
 class BlockerEngine(
     private val store: BlocklistStore,
@@ -8,6 +9,12 @@ class BlockerEngine(
     private val ownPackage: String,
 ) {
     fun decide(packageName: String, now: Long): Decision {
+        val decision = compute(packageName, now)
+        Timber.d("decide package=%s now=%d -> %s", packageName, now, decision)
+        return decision
+    }
+
+    private fun compute(packageName: String, now: Long): Decision {
         if (packageName == ownPackage) return Decision.Skip(SkipReason.OwnPackage)
         if (packageName in ignoredPackages) return Decision.Skip(SkipReason.IgnoredPackage)
 

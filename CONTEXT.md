@@ -31,3 +31,11 @@ This file is the single source of truth for domain vocabulary. Use the terms her
 - **ViewState**: short for `InterventionViewState` in the intervention context.
 - **Whitelist expiry**: a future timestamp until which a package is exempt from blocking. Set by the intervention when the user taps Continue (now + 30s). Read by the engine on every event.
 - **WhitelistGate**: the small helper that records and queries whitelist expiries. Delegates to `BlocklistStore` for persistence.
+- **LogFileTree**: the `Timber.Tree` that appends every log line to a rolling file in app-internal storage. Owns the rotation policy (1 MB cap, two generations, UTF-8 bytes), the per-line format, and the async write queue. Takes a `Clock` so the timestamp is testable. The only place on the logging path that touches disk.
+- **ShareIntentFactory**: the `fun interface` that turns the share shape (action, mime, uris, flags) into an `Intent`. Production: `AndroidShareIntentFactory`. Test fake: a `CapturingFactory` that records the call. Lets `LogSharer` stay free of `Intent` construction.
+- **LogSharer**: the small helper that builds the share `Intent` for both log files. Delegates the actual `Intent` construction to a `ShareIntentFactory`. Pure delegation, unit-testable via a capturing factory.
+- **Extract logs**: the user action that opens the system share sheet with both log files. Powered by `LogSharer`. Developer-facing.
+
+## Privacy
+
+The log file contains the package names of the apps the user has added to the blocklist. The user already sees these in the config screen, so the log does not add new exposure — but anyone who receives a shared extract can read them. Do not log anything the user has not already seen in-app.

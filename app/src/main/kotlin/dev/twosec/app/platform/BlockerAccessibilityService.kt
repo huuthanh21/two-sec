@@ -5,6 +5,7 @@ import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import dev.twosec.app.TwoSecApp
 import dev.twosec.app.ui.InterventionActivity
+import timber.log.Timber
 
 class BlockerAccessibilityService : AccessibilityService() {
 
@@ -18,6 +19,7 @@ class BlockerAccessibilityService : AccessibilityService() {
             clock = app.clock,
             onIntervene = ::startInterventionActivity,
         )
+        Timber.i("BlockerAccessibilityService onCreate")
     }
 
     override fun onInterrupt() = Unit
@@ -26,6 +28,7 @@ class BlockerAccessibilityService : AccessibilityService() {
         if (event == null) return
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val packageName = event.packageName?.toString() ?: return
+        Timber.d("a11y event package=%s class=%s", packageName, event.className)
         launcher?.onForegroundApp(packageName)
     }
 
