@@ -19,6 +19,18 @@ if ! "$AVD_MANAGER" list avd | grep -q "$AVD_NAME"; then
     echo "no" | "$AVD_MANAGER" create avd -n "$AVD_NAME" -k "system-images;android-34;google_apis;x86_64" --force
 fi
 
+# Override the default AVD screen size (QEMU gives 320x640 @ 160dpi,
+# which is unusable for coordinate-based taps). Pixel 2 baseline.
+CONFIG_INI="$HOME/.android/avd/$AVD_NAME.avd/config.ini"
+if [[ -f "$CONFIG_INI" ]]; then
+    sed -i.bak \
+        -e 's/^hw.lcd.width=.*/hw.lcd.width=1080/' \
+        -e 's/^hw.lcd.height=.*/hw.lcd.height=1920/' \
+        -e 's/^hw.lcd.density=.*/hw.lcd.density=440/' \
+        "$CONFIG_INI"
+    echo "Resized AVD display to 1080x1920 @ 440dpi (Pixel 2 baseline)."
+fi
+
 # 3. Check if emulator is already running
 RUNNING_EMULATOR=$(adb devices | grep -E '^emulator-[0-9]+[[:space:]]+device' | head -n1 | cut -f1 || true)
 
