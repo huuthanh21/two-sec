@@ -1,6 +1,7 @@
 package dev.twosec.app.domain
 
 import dev.twosec.app.data.Clock
+import timber.log.Timber
 
 class InterventionStateMachine(
     private val packageName: String,
@@ -13,12 +14,24 @@ class InterventionStateMachine(
 
     val initialEffects: List<InterventionEffect> = listOf(InterventionEffect.HideButtons)
 
-    fun process(event: InterventionEvent): List<InterventionEffect> = when (event) {
-        is InterventionEvent.Tick -> onTick(event)
-        InterventionEvent.UserTappedContinue -> onTappedContinue()
-        InterventionEvent.UserTappedClose -> onTappedCloseOrBack()
-        InterventionEvent.BackPressed -> onTappedCloseOrBack()
-        InterventionEvent.ScreenDestroyed -> emptyList()
+    fun process(event: InterventionEvent): List<InterventionEffect> {
+        val before = state
+        val effects = when (event) {
+            is InterventionEvent.Tick -> onTick(event)
+            InterventionEvent.UserTappedContinue -> onTappedContinue()
+            InterventionEvent.UserTappedClose -> onTappedCloseOrBack()
+            InterventionEvent.BackPressed -> onTappedCloseOrBack()
+            InterventionEvent.ScreenDestroyed -> emptyList()
+        }
+        Timber.d(
+            "state_machine package=%s event=%s state=%s -> %s effects=%s",
+            packageName,
+            event,
+            before,
+            state,
+            effects,
+        )
+        return effects
     }
 
     private fun onTick(event: InterventionEvent.Tick): List<InterventionEffect> {

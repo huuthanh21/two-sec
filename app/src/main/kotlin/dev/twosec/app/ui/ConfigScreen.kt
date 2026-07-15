@@ -23,6 +23,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Switch
@@ -44,6 +45,7 @@ import dev.twosec.app.platform.InstalledApp
 @Composable
 fun ConfigScreen(
     viewModel: ConfigViewModel,
+    onExtractLogs: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -52,6 +54,7 @@ fun ConfigScreen(
         onMasterToggle = viewModel::onMasterToggle,
         onAppChecked = viewModel::onAppChecked,
         onQueryChange = viewModel::onQueryChange,
+        onExtractLogs = onExtractLogs,
         modifier = modifier,
     )
 }
@@ -62,6 +65,7 @@ private fun ConfigScreenContent(
     onMasterToggle: (Boolean) -> Unit,
     onAppChecked: (String, Boolean) -> Unit,
     onQueryChange: (String) -> Unit,
+    onExtractLogs: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -158,6 +162,15 @@ private fun ConfigScreenContent(
             text = stringResource(R.string.setup_step_battery),
             style = MaterialTheme.typography.bodySmall,
         )
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = onExtractLogs,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("extract_logs"),
+        ) {
+            Text(stringResource(R.string.extract_logs))
+        }
 
         Spacer(Modifier.height(8.dp))
     }
