@@ -4,6 +4,7 @@ import dev.twosec.app.data.Clock
 import dev.twosec.app.domain.BlockerEngine
 import dev.twosec.app.domain.Decision
 import dev.twosec.app.domain.SkipReason
+import timber.log.Timber
 
 class InterventionLauncher(
     private val engine: BlockerEngine,
@@ -17,12 +18,14 @@ class InterventionLauncher(
         if (packageName == lastForegroundPackage) {
             return Decision.Skip(SkipReason.AlreadyInForeground)
         }
+        val previous = lastForegroundPackage
         lastForegroundPackage = packageName
         val decision = engine.decide(packageName, clock.now())
         if (decision is Decision.Intervene) {
             lastForegroundPackage = null
             onIntervene(packageName)
         }
+        Timber.d("onForegroundApp old=%s new=%s decision=%s", previous, packageName, decision)
         return decision
     }
 }
