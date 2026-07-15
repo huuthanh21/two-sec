@@ -86,6 +86,7 @@ dependencies {
     implementation(libs.androidx.profileinstaller)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.timber)
 
     debugImplementation(libs.androidx.ui.tooling)
 

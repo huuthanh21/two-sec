@@ -12,6 +12,7 @@ import dev.twosec.app.platform.SystemPackages
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import timber.log.Timber
 
 class TwoSecApp : Application() {
 
@@ -35,6 +36,9 @@ class TwoSecApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        if (BuildConfig.DEBUG) {
+            Timber.plant(Timber.DebugTree())
+        }
         appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         blocklistStore = DataStoreBlocklistStore(this)
         installedAppsProvider = InstalledAppsProvider(this)
