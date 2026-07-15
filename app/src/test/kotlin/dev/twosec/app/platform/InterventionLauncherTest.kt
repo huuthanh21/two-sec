@@ -1,5 +1,6 @@
 package dev.twosec.app.platform
 
+import dev.twosec.app.data.Clock
 import dev.twosec.app.data.FakeClock
 import dev.twosec.app.data.InMemoryBlocklistStore
 import dev.twosec.app.domain.BlockerEngine
@@ -15,16 +16,12 @@ class InterventionLauncherTest {
 
     private val store = InMemoryBlocklistStore()
     private val clock = FakeClock(initialNow = 0L)
-    private val engine = BlockerEngine(
-        store = store,
-        ignoredPackages = emptySet(),
-        ownPackage = OWN_PACKAGE,
-    )
     private val interveneCalls = mutableListOf<String>()
-    private val launcher = InterventionLauncher(
-        engine = engine,
+    private val launcher = buildLauncher(
+        store = store,
         clock = clock,
-        onIntervene = { packageName -> interveneCalls.add(packageName) },
+        ignoredPackages = emptySet(),
+        onIntervene = { interveneCalls.add(it) },
     )
 
     @Before
@@ -134,9 +131,59 @@ class InterventionLauncherTest {
         assertEquals(emptyList<String>(), interveneCalls)
     }
 
+    @Test
+    fun `ignored foreground event between blocked-app events does not break AlreadyInForeground dedup`() = runTest {
+        val imeInterveneCalls = mutableListOf<String>()
+        val imeLauncher = buildLauncher(
+            store = store,
+            clock = clock,
+            ignoredPackages = setOf(IME_PACKAGE),
+            onIntervene = { imeInterveneCalls.add(it) },
+        )
+        imeLauncher.onForegroundApp(BLOCKED_PACKAGE)
+        imeInterveneCalls.clear()
+        clock.set(1_000L)
+        store.setWhitelistExpiry(BLOCKED_PACKAGE, untilMs = 30_000L)
+        clock.set(2_000L)
+        val whitelisted = imeLauncher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.Whitelisted), whitelisted)
+
+        clock.set(3_000L)
+        val ime = imeLauncher.onForegroundApp(IME_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.IgnoredPackage), ime)
+
+        val inWhitelist = imeLauncher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), inWhitelist)
+        assertEquals(emptyList<String>(), imeInterveneCalls)
+
+        clock.set(40_000L)
+        val postExpiry = imeLauncher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), postExpiry)
+        assertEquals(emptyList<String>(), imeInterveneCalls)
+    }
+
     private companion object {
         const val BLOCKED_PACKAGE = "com.example.blocked"
         const val UNBLOCKED_PACKAGE = "com.example.unblocked"
+        const val IME_PACKAGE = "com.example.ime"
         const val OWN_PACKAGE = "dev.twosec.app"
+
+        fun buildLauncher(
+            store: InMemoryBlocklistStore,
+            clock: Clock,
+            ignoredPackages: Set<String>,
+            onIntervene: (String) -> Unit,
+        ): InterventionLauncher {
+            val engine = BlockerEngine(
+                store = store,
+                ignoredPackages = ignoredPackages,
+                ownPackage = OWN_PACKAGE,
+            )
+            return InterventionLauncher(
+                engine = engine,
+                clock = clock,
+                onIntervene = onIntervene,
+            )
+        }
     }
 }
