@@ -17,6 +17,7 @@ class BlockerAccessibilityService : AccessibilityService() {
         launcher = InterventionLauncher(
             engine = app.blockerEngine,
             clock = app.clock,
+            isUserFacing = app.installedAppsProvider::isUserFacing,
             onIntervene = ::startInterventionActivity,
         )
         Timber.i("BlockerAccessibilityService onCreate")

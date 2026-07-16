@@ -6,6 +6,9 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.view.inputmethod.InputMethodManager
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 data class InstalledApp(
     val packageName: String,
@@ -110,6 +113,16 @@ class InstalledAppsProvider(
             cachedAllLaunchablePackages = null
             cachedHomePackages = null
             cachedImePackages = null
+        }
+    }
+
+    fun rebuildCacheAsync(coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO)) {
+        refresh()
+        coroutineScope.launch {
+            getHomePackages()
+            getEnabledImePackages()
+            listUserLaunchableApps()
+            getAllLaunchablePackages()
         }
     }
 

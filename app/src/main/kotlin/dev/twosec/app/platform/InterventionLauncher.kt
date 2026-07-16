@@ -9,12 +9,16 @@ import timber.log.Timber
 class InterventionLauncher(
     private val engine: BlockerEngine,
     private val clock: Clock,
+    private val isUserFacing: (packageName: String) -> Boolean = { true },
     private val onIntervene: (packageName: String) -> Unit,
 ) {
 
     private var lastForegroundPackage: String? = null
 
     fun onForegroundApp(packageName: String): Decision {
+        if (!isUserFacing(packageName)) {
+            return Decision.Skip(SkipReason.IgnoredPackage)
+        }
         if (packageName == lastForegroundPackage) {
             return Decision.Skip(SkipReason.AlreadyInForeground)
         }

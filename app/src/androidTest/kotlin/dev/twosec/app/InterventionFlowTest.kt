@@ -12,6 +12,7 @@ import dev.twosec.app.data.InMemoryBlocklistStore
 import dev.twosec.app.data.SystemClock
 import dev.twosec.app.domain.BlockerEngine
 import dev.twosec.app.domain.Decision
+import dev.twosec.app.domain.SkipReason
 import dev.twosec.app.platform.InterventionLauncher
 import dev.twosec.app.platform.SystemPackages
 import dev.twosec.app.ui.InterventionActivity
@@ -93,6 +94,55 @@ class InterventionFlowTest {
         val intent = Intent().setClassName(mainContext, "dev.twosec.app.ui.InterventionActivity")
         val activities = mainContext.packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
         assertTrue("InterventionActivity should be registered in main manifest", activities.isNotEmpty())
+    }
+
+    @Test
+    fun returningFromSystemOverlaysOrIme_doesNotTriggerFalsePositiveInterventions() {
+        val calls = mutableListOf<String>()
+        val mockIsUserFacing = { packageName: String ->
+            packageName == mainContext.packageName || packageName == BLOCKED_PACKAGE
+        }
+        val store = InMemoryBlocklistStore()
+        runBlocking {
+            store.setMasterEnabled(true)
+            store.addToBlocklist(BLOCKED_PACKAGE)
+        }
+        val clock = SystemClock()
+        val engine = BlockerEngine(
+            store = store,
+            ignoredPackages = SystemPackages.ignored,
+            ownPackage = mainContext.packageName,
+        )
+        val launcher = InterventionLauncher(
+            engine = engine,
+            clock = clock,
+            isUserFacing = mockIsUserFacing,
+            onIntervene = { calls.add(it) },
+        )
+
+        // 1. Transition to blocked package -> Intervene
+        val decision1 = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        assertTrue("Expected Intervene; got $decision1", decision1 is Decision.Intervene)
+        assertEquals(listOf(BLOCKED_PACKAGE), calls)
+        calls.clear()
+
+        // Simulate user completing intervention and whitelisting the app
+        runBlocking {
+            store.setWhitelistExpiry(BLOCKED_PACKAGE, System.currentTimeMillis() + 30_000L)
+        }
+
+        // 2. Transition back to blocked package -> Skip (Whitelisted)
+        val decision2 = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        assertTrue("Expected Skip (Whitelisted); got $decision2", decision2 is Decision.Skip && decision2.reason == SkipReason.Whitelisted)
+
+        // 3. Transition to non-user-facing system overlay or IME -> IgnoredPackage
+        val decision3 = launcher.onForegroundApp("com.android.inputmethod.latin")
+        assertEquals(Decision.Skip(SkipReason.IgnoredPackage), decision3)
+
+        // 4. Return to blocked package -> Skip (AlreadyInForeground)
+        val decision4 = launcher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), decision4)
+        assertEquals(emptyList<String>(), calls)
     }
 
     private fun launcherFor(
