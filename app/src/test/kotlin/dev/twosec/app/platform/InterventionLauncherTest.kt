@@ -162,6 +162,40 @@ class InterventionLauncherTest {
         assertEquals(emptyList<String>(), imeInterveneCalls)
     }
 
+    @Test
+    fun `non-user-facing package transition is ignored and does not trigger intervention when returning to blocked app`() = runTest {
+        val calls = mutableListOf<String>()
+        val mockLauncher = buildLauncher(
+            store = store,
+            clock = clock,
+            ignoredPackages = emptySet(),
+            isUserFacing = { it == OWN_PACKAGE || it == BLOCKED_PACKAGE },
+            onIntervene = { calls.add(it) },
+        )
+
+        // First transition to blocked app -> Intervene
+        val first = mockLauncher.onForegroundApp(BLOCKED_PACKAGE)
+        assertTrue(first is Decision.Intervene)
+        assertEquals(listOf(BLOCKED_PACKAGE), calls)
+        calls.clear()
+
+        // Set whitelist to simulate user completing intervention
+        store.setWhitelistExpiry(BLOCKED_PACKAGE, untilMs = 30_000L)
+
+        // Second transition to blocked app -> Whitelisted (and sets lastForegroundPackage)
+        val second = mockLauncher.onForegroundApp(BLOCKED_PACKAGE)
+        assertTrue(second is Decision.Skip && second.reason == SkipReason.Whitelisted)
+
+        // Transition to non-user-facing package (e.g. system overlay / IME) -> Ignored
+        val overlay = mockLauncher.onForegroundApp("com.example.overlay")
+        assertEquals(Decision.Skip(SkipReason.IgnoredPackage), overlay)
+
+        // Return to blocked app -> Skip (AlreadyInForeground)
+        val returnToBlocked = mockLauncher.onForegroundApp(BLOCKED_PACKAGE)
+        assertEquals(Decision.Skip(SkipReason.AlreadyInForeground), returnToBlocked)
+        assertEquals(emptyList<String>(), calls)
+    }
+
     private companion object {
         const val BLOCKED_PACKAGE = "com.example.blocked"
         const val UNBLOCKED_PACKAGE = "com.example.unblocked"
@@ -172,6 +206,7 @@ class InterventionLauncherTest {
             store: InMemoryBlocklistStore,
             clock: Clock,
             ignoredPackages: Set<String>,
+            isUserFacing: (String) -> Boolean = { true },
             onIntervene: (String) -> Unit,
         ): InterventionLauncher {
             val engine = BlockerEngine(
@@ -182,6 +217,7 @@ class InterventionLauncherTest {
             return InterventionLauncher(
                 engine = engine,
                 clock = clock,
+                isUserFacing = isUserFacing,
                 onIntervene = onIntervene,
             )
         }

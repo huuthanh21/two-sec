@@ -16,8 +16,10 @@ This file is the single source of truth for domain vocabulary. Use the terms her
 - **ConfigActivity** (V1: `MainActivity`): the single configuration screen. Master toggle, installed-app checklist, static requirements section.
 - **ConfigViewModel**: the `ViewModel` for `ConfigActivity`. Combines the master toggle flow, the blocklist flow, and the installed-apps snapshot into a single `ConfigUiState` and exposes toggle/check callbacks.
 - **ConfigUiState**: the rendered state of the config screen — master toggle, installed apps, current blocklist, loading flag.
+- **Home / Launcher packages**: the launcher or home screen packages configured in the system.
+- **IME / Input Method**: an input method editor (e.g. keyboard) enabled in the Android system settings.
 - **InstalledApp**: a UI-layer value type with a `packageName` and a `label`, produced by `InstalledAppsProvider`.
-- **InstalledAppsProvider**: a thin wrapper over `PackageManager` that returns the launchable user apps on the device. The only place in the app that reads `PackageManager` to enumerate user apps.
+- **InstalledAppsProvider**: a thin wrapper over `PackageManager` that returns the launchable user apps on the device. The only place in the app that reads `PackageManager` to query user-facing apps, home/launcher packages, and enabled system input methods.
 - **InterventionLauncher**: the platform-layer glue between `BlockerAccessibilityService` and `BlockerEngine`. Tracks the last foreground package so repeated `TYPE_WINDOW_STATE_CHANGED` events for the same package (in-app navigation) are filtered out as `Skip(AlreadyInForeground)` before the engine runs. When the engine returns `Intervene`, invokes the wired `onIntervene` callback with the package name; the service supplies that callback and is responsible for building the `Intent` and starting `InterventionActivity`.
 - **Decision**: the return type of `BlockerEngine.decide(packageName, now)`. Sealed type with `Intervene` and `Skip(reason)` variants, where `reason` covers `MasterOff`, `NotInBlocklist`, `Whitelisted`, `IgnoredPackage`, `OwnPackage`, `AlreadyInForeground`. `AlreadyInForeground` is produced by `InterventionLauncher` (not the engine) when the foreground package has not changed since the last event — it filters in-app navigation before the engine runs.
 - **Effect**: a side-effect the intervention state machine requests the activity to perform. `ShowButtons`, `HideButtons`, `FinishActivity`, `GoHome`, `WhitelistPackage(packageName, until)`.
@@ -35,6 +37,7 @@ This file is the single source of truth for domain vocabulary. Use the terms her
 - **ShareIntentFactory**: the `fun interface` that turns the share shape (action, mime, uris, flags) into an `Intent`. Production: `AndroidShareIntentFactory`. Test fake: a `CapturingFactory` that records the call. Lets `LogSharer` stay free of `Intent` construction.
 - **LogSharer**: the small helper that builds the share `Intent` for both log files. Delegates the actual `Intent` construction to a `ShareIntentFactory`. Pure delegation, unit-testable via a capturing factory.
 - **Extract logs**: the user action that opens the system share sheet with both log files. Powered by `LogSharer`. Developer-facing.
+- **User-facing package**: a package that is either a launchable app, a home/launcher package, or the two-sec app itself.
 
 ## Privacy
 
